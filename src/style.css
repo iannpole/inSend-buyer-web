@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-freshco-green: #10664F;
+  --color-freshco-light: #F4F7F6;
+  --color-freshco-accent: #FFC107;
+  --color-freshco-text: #1F2937;
+  --color-freshco-gray: #6B7280;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Custom utility styles or base overrides */
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-freshco-light);
+  font-family: var(--font-sans);
+  color: var(--color-freshco-text);
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+.hide-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
