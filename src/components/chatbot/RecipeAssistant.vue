@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { Send, Bot, ShoppingBag, ShoppingCart, X } from 'lucide-vue-next'
-import { getAIResponse } from '../../data/mockRecipes'
-import type { RecipeResponse } from '../../data/mockRecipes'
 import { useCart } from '../../store/cart'
+import { useAuth } from '../../store/auth'
+import axios from 'axios'
 
 const isOpen = ref(false)
 const inputQuery = ref('')
 const isLoading = ref(false)
-const chatMessages = ref<{ id: number, sender: 'user'|'bot', text: string, recipeData?: RecipeResponse }[]>([
-  { id: 1, sender: 'bot', text: 'Halo! Aku AI Chef inSend 🧑‍🍳. Mau masak apa hari ini? Ketik nama masakan (misal: "sayur sop" atau "nasi goreng") dan aku siapkan bahan-bahannya.' }
+const conversationId = ref<string | null>(null)
+
+interface ChatMessage {
+  id: number
+  sender: 'user' | 'bot'
+  text: string
+  recipes?: any[]
+}
+
+const chatMessages = ref<ChatMessage[]>([
+  { id: 1, sender: 'bot', text: 'Halo! Aku AI Chef inSend 🧑‍🍳. Mau masak apa hari ini? Ketik nama masakan (misal: "sayur sop" atau "nasi goreng") dan aku siapkan resep beserta bahan-bahannya.' }
 ])
 const chatContainer = ref<HTMLElement | null>(null)
 const { addToCart } = useCart()
+const { token, isAuthenticated } = useAuth()
 
 // Auto scroll to bottom
 watch(chatMessages, async () => {
@@ -35,28 +45,78 @@ const sendMessage = async () => {
   inputQuery.value = ''
   isLoading.value = true
   
-  // Fetch AI Response
-  const response = await getAIResponse(query)
-  
-  chatMessages.value.push({
-    id: Date.now() + 1,
-    sender: 'bot',
-    text: response.message,
-    recipeData: response.ingredients ? response : undefined
-  })
-  
-  isLoading.value = false
+  try {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+    
+    // Build request payload
+    const payload: any = {
+      message: query,
+      mode: 'recipe'
+    }
+    if (conversationId.value) {
+      payload.conversation_id = conversationId.value
+    }
+
+    // Build headers — AI chat requires auth
+    const headers: any = {
+      'Content-Type': 'application/json'
+    }
+    if (token.value) {
+      headers['Authorization'] = `Bearer ${token.value}`
+    }
+
+    const response = await axios.post(`${baseURL}/ai/chat`, payload, { headers })
+    
+    const data = response.data
+
+    // Save conversation ID for follow-up messages
+    if (data.conversation_id) {
+      conversationId.value = data.conversation_id
+    }
+
+    // Build bot message
+    const botMessage: ChatMessage = {
+      id: Date.now() + 1,
+      sender: 'bot',
+      text: data.reply || data.message || 'Maaf, saya tidak bisa memproses permintaan itu.',
+      recipes: data.recipes && data.recipes.length > 0 ? data.recipes : undefined
+    }
+    
+    chatMessages.value.push(botMessage)
+    
+  } catch (error: any) {
+    console.error('AI Chat error:', error)
+    
+    let errorMsg = 'Maaf, terjadi kesalahan saat menghubungi AI Chef.'
+    
+    if (error.response?.status === 401) {
+      errorMsg = 'Kamu perlu login terlebih dahulu untuk menggunakan AI Chef. Silakan login di menu akun.'
+    } else if (error.response?.status === 500) {
+      errorMsg = 'Server sedang bermasalah. Coba lagi nanti ya.'
+    } else if (error.response?.data?.message) {
+      errorMsg = error.response.data.message
+    }
+    
+    chatMessages.value.push({
+      id: Date.now() + 1,
+      sender: 'bot',
+      text: errorMsg
+    })
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const addAllIngredients = (recipe: RecipeResponse) => {
-  if (!recipe.ingredients) return
-  recipe.ingredients.forEach(item => {
+const addRecipeIngredients = (recipe: any) => {
+  // Recipe structure from RecipeBotService: { name, ingredients: [{name, amount, unit, product_id?}], ... }
+  const ingredients = recipe.ingredients || []
+  ingredients.forEach((item: any, idx: number) => {
     addToCart({
-      id: item.product_id,
-      title: item.name,
-      price: item.price,
-      imageUrl: item.imageUrl
-    }, item.qty)
+      id: item.product_id || `ai-recipe-${Date.now()}-${idx}`,
+      title: typeof item === 'string' ? item : (item.name || 'Bahan'),
+      price: item.price || 15000, // Default price if not available
+      imageUrl: item.imageUrl || 'https://via.placeholder.com/80?text=' + encodeURIComponent(typeof item === 'string' ? item : (item.name || 'Bahan'))
+    }, item.qty || 1)
   })
 }
 
@@ -67,6 +127,14 @@ const formatPrice = (value: number) => {
     minimumFractionDigits: 0,
   }).format(value)
 }
+
+// Get ingredient display label
+const getIngLabel = (ing: any): string => {
+  if (typeof ing === 'string') return ing
+  let label = ing.name || ''
+  if (ing.amount) label = `${ing.amount} ${ing.unit || ''} ${label}`.trim()
+  return label
+}
 </script>
 
 <template>
@@ -75,7 +143,7 @@ const formatPrice = (value: number) => {
     <button 
       v-if="!isOpen"
       @click="isOpen = true"
-      class="group flex items-center justify-center w-14 h-14 bg-misfits-orange border-2 border-misfits-green rounded-full shadow-[4px_4px_0px_#00473B] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#00473B] transition-all duration-300"
+      class="group flex items-center justify-center w-14 h-14 bg-freshco-green border-2 border-[#0c513e] rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
     >
       <Bot class="text-white h-7 w-7 stroke-[2.5]" />
     </button>
@@ -83,23 +151,28 @@ const formatPrice = (value: number) => {
     <!-- Chat Window -->
     <div 
       v-else
-      class="w-80 sm:w-96 bg-misfits-bg border-4 border-misfits-green shadow-[8px_8px_0px_#00473B] rounded-[2rem] overflow-hidden flex flex-col transform transition-all duration-300 animate-in slide-in-from-bottom-8 origin-bottom-right"
+      class="w-80 sm:w-96 bg-gray-50 border border-gray-200 shadow-2xl rounded-[2rem] overflow-hidden flex flex-col transition-all duration-300"
       style="height: 500px; max-height: 80vh;"
     >
       <!-- Header -->
-      <div class="bg-misfits-green border-b-4 border-misfits-green p-4 flex justify-between items-center text-misfits-bg z-10">
+      <div class="bg-freshco-green p-4 flex justify-between items-center text-white z-10">
         <div class="flex items-center space-x-3">
-          <div class="p-1.5 bg-misfits-yellow text-misfits-green rounded-xl border-2 border-misfits-green shadow-[2px_2px_0px_#00473B]">
-            <Bot class="h-5 w-5 stroke-[2.5]" />
+          <div class="p-1.5 bg-white/20 rounded-xl">
+            <Bot class="h-5 w-5 stroke-[2.5] text-white" />
           </div>
           <div>
             <h3 class="font-black text-sm leading-tight text-white mb-0.5">Smart Recipe Bot</h3>
-            <p class="text-[10px] font-bold text-misfits-bg bg-misfits-green border border-misfits-border px-1.5 rounded inline-block">by inSend AI</p>
+            <p class="text-[10px] font-bold text-white/70">by inSend AI</p>
           </div>
         </div>
-        <button @click="isOpen = false" class="text-misfits-bg hover:text-misfits-yellow transition-colors p-1">
+        <button @click="isOpen = false" class="text-white/80 hover:text-white transition-colors p-1">
           <X class="h-6 w-6 stroke-[2.5]" />
         </button>
+      </div>
+
+      <!-- Auth Warning -->
+      <div v-if="!isAuthenticated" class="bg-yellow-50 border-b border-yellow-100 px-4 py-2 text-xs text-yellow-700 font-medium">
+        ⚠️ Login diperlukan untuk menggunakan AI Chef.
       </div>
 
       <!-- Messages Area -->
@@ -114,43 +187,47 @@ const formatPrice = (value: number) => {
           :class="msg.sender === 'user' ? 'justify-end' : 'justify-start'"
         >
           <!-- User Bubble -->
-          <div v-if="msg.sender === 'user'" class="bg-misfits-yellow text-misfits-green font-bold border-2 border-misfits-green rounded-2xl rounded-br-sm px-4 py-2 max-w-[85%] shadow-[2px_2px_0px_#00473B] text-sm">
+          <div v-if="msg.sender === 'user'" class="bg-freshco-green text-white font-medium rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%] shadow-sm text-sm">
             {{ msg.text }}
           </div>
           
           <!-- Bot Bubble -->
           <div v-else class="flex space-x-2 max-w-[90%]">
-            <div class="w-8 h-8 rounded-full border-2 border-misfits-green bg-misfits-green flex items-center justify-center flex-shrink-0 mt-1 shadow-[1px_1px_0px_#00473B]">
+            <div class="w-8 h-8 rounded-full bg-freshco-green flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
               <Bot class="h-4 w-4 text-white" />
             </div>
-            <div class="bg-white border-2 border-misfits-green text-misfits-green font-medium rounded-2xl rounded-bl-sm px-4 py-3 shadow-[2px_2px_0px_#00473B] text-sm space-y-3">
-              <p>{{ msg.text }}</p>
+            <div class="bg-white border border-gray-100 text-gray-800 font-medium rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm text-sm space-y-3">
+              <p class="whitespace-pre-wrap">{{ msg.text }}</p>
               
-              <!-- Recipe Ingredients Card -->
-              <div v-if="msg.recipeData && msg.recipeData.ingredients" class="mt-3 bg-misfits-bg border-2 border-misfits-green rounded-xl overflow-hidden shadow-[2px_2px_0px_#00473B]">
-                <div class="px-3 py-2 bg-misfits-green border-b-2 border-misfits-green">
-                  <p class="font-black text-white text-[11px] flex items-center space-x-1 uppercase tracking-wider">
-                    <ShoppingBag class="h-3 w-3 stroke-[3]" />
-                    <span>Bahan {{ msg.recipeData.recipeName }}</span>
-                  </p>
-                </div>
-                <div class="p-2 space-y-2">
-                  <div v-for="item in msg.recipeData.ingredients" :key="item.id" class="flex justify-between items-center text-xs border-b border-misfits-green/10 pb-2 last:border-0 last:pb-0">
-                    <div class="flex items-center space-x-2 flex-1 min-w-0">
-                      <img :src="item.imageUrl" class="w-7 h-7 rounded bg-white object-cover border-2 border-misfits-green" />
-                      <span class="text-misfits-green font-bold truncate">{{ item.name }}</span>
-                    </div>
-                    <span class="font-black text-misfits-green ml-2 whitespace-nowrap">{{ formatPrice(item.price) }}</span>
+              <!-- Recipe Cards from AI -->
+              <div v-if="msg.recipes && msg.recipes.length > 0" class="space-y-3 mt-3">
+                <div v-for="(recipe, rIdx) in msg.recipes" :key="rIdx" class="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                  <div class="px-3 py-2 bg-freshco-green/10 border-b border-gray-100">
+                    <p class="font-bold text-freshco-green text-[11px] flex items-center space-x-1 uppercase tracking-wider">
+                      <ShoppingBag class="h-3 w-3 stroke-[3]" />
+                      <span>{{ recipe.name || recipe.title || 'Resep' }}</span>
+                    </p>
                   </div>
-                </div>
-                <div class="p-2 pt-0">
-                  <button 
-                    @click="addAllIngredients(msg.recipeData!)"
-                    class="w-full flex items-center justify-center space-x-1.5 bg-misfits-orange text-white py-2 px-3 rounded-xl text-xs font-black border-2 border-misfits-green shadow-[2px_2px_0px_#00473B] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#00473B] transition-all"
-                  >
-                    <ShoppingCart class="h-4 w-4 stroke-[3]" />
-                    <span>Beli Semua Bahan</span>
-                  </button>
+                  
+                  <!-- Ingredients list -->
+                  <div v-if="recipe.ingredients && recipe.ingredients.length > 0" class="p-2 space-y-1.5">
+                    <div v-for="(item, iIdx) in recipe.ingredients" :key="iIdx" class="flex justify-between items-center text-xs border-b border-gray-50 pb-1.5 last:border-0 last:pb-0">
+                      <div class="flex items-center space-x-2 flex-1 min-w-0">
+                        <span class="text-gray-700 font-medium truncate">{{ getIngLabel(item) }}</span>
+                      </div>
+                      <span v-if="item.price" class="font-bold text-freshco-green ml-2 whitespace-nowrap">{{ formatPrice(item.price) }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="p-2 pt-0">
+                    <button 
+                      @click="addRecipeIngredients(recipe)"
+                      class="w-full flex items-center justify-center space-x-1.5 bg-freshco-green text-white py-2 px-3 rounded-xl text-xs font-bold hover:bg-[#0c513e] transition-colors"
+                    >
+                      <ShoppingCart class="h-4 w-4 stroke-[3]" />
+                      <span>Beli Semua Bahan</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -160,33 +237,33 @@ const formatPrice = (value: number) => {
 
         <!-- Typing Indicator -->
         <div v-if="isLoading" class="flex justify-start space-x-2 max-w-[90%]">
-          <div class="w-8 h-8 rounded-full border-2 border-misfits-green bg-misfits-green flex items-center justify-center flex-shrink-0 shadow-[1px_1px_0px_#00473B]">
+          <div class="w-8 h-8 rounded-full bg-freshco-green flex items-center justify-center flex-shrink-0 shadow-sm">
             <Bot class="h-4 w-4 text-white" />
           </div>
-          <div class="bg-white border-2 border-misfits-green rounded-2xl rounded-bl-sm px-4 py-3 shadow-[2px_2px_0px_#00473B] flex space-x-1.5 items-center">
-             <div class="w-2 h-2 bg-misfits-orange rounded-full border border-misfits-green animate-bounce"></div>
-             <div class="w-2 h-2 bg-misfits-orange rounded-full border border-misfits-green animate-bounce" style="animation-delay: 0.15s"></div>
-             <div class="w-2 h-2 bg-misfits-orange rounded-full border border-misfits-green animate-bounce" style="animation-delay: 0.3s"></div>
+          <div class="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex space-x-1.5 items-center">
+             <div class="w-2 h-2 bg-freshco-green rounded-full animate-bounce"></div>
+             <div class="w-2 h-2 bg-freshco-green rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+             <div class="w-2 h-2 bg-freshco-green rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
           </div>
         </div>
       </div>
 
       <!-- Input Area -->
-      <div class="p-3 bg-misfits-green border-t-4 border-misfits-green">
+      <div class="p-3 bg-white border-t border-gray-100">
         <form @submit.prevent="sendMessage" class="relative flex items-center">
           <input 
             v-model="inputQuery"
             type="text" 
-            placeholder="Tulis resep..." 
-            class="w-full bg-white border-2 border-misfits-green text-misfits-green font-bold text-sm rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-0 shadow-[2px_2px_0px_#00473B] placeholder-misfits-green/50"
+            placeholder="Mau masak apa hari ini?..." 
+            class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-medium text-sm rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-freshco-green/30 focus:border-freshco-green placeholder-gray-400 transition-all"
             :disabled="isLoading"
           />
           <button 
             type="submit"
             :disabled="!inputQuery.trim() || isLoading"
-            class="absolute right-2 p-1.5 rounded-full text-misfits-green bg-misfits-yellow border-2 border-misfits-green shadow-[1px_1px_0px_#00473B] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-[1px_1px_0px_#00473B] transition-all"
+            class="absolute right-1.5 p-2 rounded-full text-white bg-freshco-green disabled:opacity-50 hover:bg-[#0c513e] transition-all"
           >
-            <Send class="h-4 w-4 stroke-[3]" />
+            <Send class="h-4 w-4 stroke-[2.5]" />
           </button>
         </form>
       </div>

@@ -1,13 +1,30 @@
 <script setup lang="ts">
 import { X, Minus, Plus, ShoppingBag, Trash2, MapPin, CreditCard, CheckCircle2 } from 'lucide-vue-next'
 import { useCart } from '../../store/cart'
-import { ref } from 'vue'
+import { useAuth } from '../../store/auth'
+import { ref, watch } from 'vue'
+import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 const { isCartOpen, cartItems, toggleCart, updateQuantity, removeFromCart, cartTotal } = useCart()
+const { isAuthenticated, user, token } = useAuth()
+const router = useRouter()
 
 const step = ref<'cart' | 'checkout' | 'success'>('cart')
 const shippingAddress = ref('')
-const paymentMethod = ref('transfer')
+const paymentMethod = ref('cod')
+const fullName = ref('')
+const phone = ref('')
+const loading = ref(false)
+
+// Pre-fill when authenticated
+watch(isCartOpen, (open) => {
+    if (open && user.value) {
+        fullName.value = user.value.name || ''
+        phone.value = user.value.phone || ''
+        shippingAddress.value = user.value.address || ''
+    }
+})
 
 const formatPrice = (value: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -18,20 +35,46 @@ const formatPrice = (value: number) => {
 }
 
 const proceedToCheckout = () => {
+  if (!isAuthenticated.value) {
+      toggleCart()
+      router.push('/login')
+      return
+  }
   step.value = 'checkout'
 }
 
-const placeOrder = () => {
-  // Mock API call
-  setTimeout(() => {
-    step.value = 'success'
-    cartItems.value = [] // clear cart
-  }, 1000)
+const placeOrder = async () => {
+  loading.value = true
+  try {
+      const items = cartItems.value.map(item => ({
+          product_id: item.id,
+          qty: item.quantity
+      }))
+
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+      await axios.post(`${baseURL}/orders`, {
+          items,
+          shipping_address: shippingAddress.value,
+          payment_method: paymentMethod.value,
+          notes: ''
+      }, {
+          headers: { Authorization: `Bearer ${token.value}` }
+      })
+
+      step.value = 'success'
+      cartItems.value = [] // clear cart
+  } catch (error) {
+      console.error('Failed to place order:', error)
+      alert('Gagal membuat pesanan. Pastikan stok produk mencukupi.')
+  } finally {
+      loading.value = false
+  }
 }
 
 const resetCart = () => {
   step.value = 'cart'
   toggleCart()
+  router.push('/orders')
 }
 </script>
 
@@ -78,12 +121,10 @@ const resetCart = () => {
 
           <div v-else class="space-y-4">
             <div v-for="item in cartItems" :key="item.id" class="flex gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-              <!-- Item Image -->
               <div class="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center p-2 flex-shrink-0">
                  <img :src="item.imageUrl" :alt="item.title" class="max-w-full max-h-full object-contain" />
               </div>
               
-              <!-- Item Info -->
               <div class="flex-1 flex flex-col justify-between py-1">
                 <div class="flex justify-between items-start">
                   <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight pr-2">{{ item.title }}</h3>
@@ -94,7 +135,6 @@ const resetCart = () => {
                 
                 <div class="flex items-center justify-between mt-2">
                   <p class="text-freshco-green font-bold text-sm">{{ formatPrice(item.price) }}</p>
-                  <!-- Quantity -->
                   <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-2 py-1 border border-gray-100">
                     <button @click="updateQuantity(item.id, item.quantity - 1)" class="text-gray-500 hover:text-freshco-green">
                       <Minus class="h-3 w-3" />
@@ -133,18 +173,17 @@ const resetCart = () => {
       <!-- Step: Checkout -->
       <template v-else-if="step === 'checkout'">
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
-           
            <!-- Shipping Details -->
            <div class="space-y-3">
               <h3 class="font-bold text-gray-900 flex items-center gap-2"><MapPin class="h-4 w-4 text-freshco-green"/> Shipping Details</h3>
               <div class="space-y-3">
                  <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-freshco-green focus:ring-1 focus:ring-freshco-green" placeholder="John Doe" />
+                    <input type="text" v-model="fullName" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-freshco-green focus:ring-1 focus:ring-freshco-green" placeholder="John Doe" />
                  </div>
                  <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
-                    <input type="text" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-freshco-green focus:ring-1 focus:ring-freshco-green" placeholder="+62 812..." />
+                    <input type="text" v-model="phone" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-freshco-green focus:ring-1 focus:ring-freshco-green" placeholder="+62 812..." />
                  </div>
                  <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Full Address</label>
@@ -169,16 +208,9 @@ const resetCart = () => {
                        <span class="text-sm font-medium">Cash on Delivery</span>
                     </div>
                  </label>
-                 <label class="flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors" :class="paymentMethod === 'card' ? 'border-freshco-green bg-[#E8F3EF]' : 'border-gray-200 hover:bg-gray-50'">
-                    <div class="flex items-center gap-3">
-                       <input type="radio" v-model="paymentMethod" value="card" class="text-freshco-green focus:ring-freshco-green" />
-                       <span class="text-sm font-medium">Credit / Debit Card</span>
-                    </div>
-                 </label>
               </div>
            </div>
            
-           <!-- Order Summary -->
            <div class="bg-gray-50 rounded-xl p-4">
               <p class="text-xs text-gray-500 mb-2">Total Amount to Pay</p>
               <p class="text-2xl font-black text-freshco-green">{{ formatPrice(cartTotal) }}</p>
@@ -189,8 +221,8 @@ const resetCart = () => {
           <button @click="step = 'cart'" class="w-1/3 py-3.5 px-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
             Back
           </button>
-          <button @click="placeOrder" :disabled="!shippingAddress" class="w-2/3 bg-freshco-green disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3.5 px-6 rounded-xl font-bold hover:bg-[#0c513e] transition-colors shadow-md shadow-freshco-green/20">
-            Place Order
+          <button @click="placeOrder" :disabled="!shippingAddress || loading" class="w-2/3 bg-freshco-green disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3.5 px-6 rounded-xl font-bold hover:bg-[#0c513e] transition-colors shadow-md shadow-freshco-green/20">
+            {{ loading ? 'Processing...' : 'Place Order' }}
           </button>
         </div>
       </template>
@@ -205,11 +237,10 @@ const resetCart = () => {
             <p class="text-gray-500 text-sm mb-8">Your order has been successfully placed. We'll send you an email confirmation shortly.</p>
             
             <button @click="resetCart" class="w-full bg-freshco-green text-white py-3.5 px-6 rounded-xl font-bold hover:bg-[#0c513e] transition-colors">
-               Continue Shopping
+               Lihat Pesanan Saya
             </button>
          </div>
       </template>
-
     </div>
   </div>
 </template>

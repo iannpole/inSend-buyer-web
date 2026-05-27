@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { ShoppingCart, Search, Menu, UserCircle, Heart, MapPin } from 'lucide-vue-next'
+import { ShoppingCart, Search, Menu, UserCircle, Heart, MapPin, ClipboardList } from 'lucide-vue-next'
 import { useCart } from '../../store/cart'
+import { useAuth } from '../../store/auth'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const { cartCount, toggleCart } = useCart()
+const { isAuthenticated, user, clearAuth } = useAuth()
+const router = useRouter()
 
 const showLocationModal = ref(false)
 const selectedLocation = ref('Pilih Lokasi Pengiriman')
+const searchQuery = ref('')
 
+const handleSearch = () => {
+  if (searchQuery.value) {
+    router.push({ path: '/shop', query: { q: searchQuery.value } })
+  }
+}
 </script>
 
 <template>
@@ -16,34 +26,32 @@ const selectedLocation = ref('Pilih Lokasi Pengiriman')
       <div class="flex justify-between items-center h-20">
         
         <!-- Logo -->
-        <div class="flex-shrink-0 flex items-center cursor-pointer gap-2">
-          <div class="bg-freshco-green text-white p-1.5 rounded-lg">
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-leaf"><path d="M11 20A7 7 0 0 1 14 6c5 0 8 4 8 4-4 8-11 11-11 11z"/><path d="M2 15s4-7 12-7"/></svg>
-          </div>
-          <span class="text-2xl font-black text-gray-900 tracking-tight">inSend</span>
-        </div>
+        <RouterLink to="/" class="flex-shrink-0 flex items-center cursor-pointer gap-2">
+          <span class="text-2xl font-black text-gray-900 tracking-tight mr-8">inSend</span>
+        </RouterLink>
 
         <!-- Desktop Nav Links -->
         <div class="hidden lg:flex space-x-8">
-          <a href="#" class="text-freshco-green font-semibold">Home</a>
-          <a href="#" class="text-gray-600 hover:text-freshco-green font-medium transition-colors">Shop <span class="text-xs">▼</span></a>
-          <a href="#" class="text-gray-600 hover:text-freshco-green font-medium transition-colors">Vendor <span class="text-xs">▼</span></a>
-          <a href="#" class="text-gray-600 hover:text-freshco-green font-medium transition-colors">Blog</a>
-          <a href="#" class="text-gray-600 hover:text-freshco-green font-medium transition-colors">Contact</a>
+          <RouterLink to="/" class="text-gray-600 hover:text-freshco-green font-medium transition-colors" active-class="text-freshco-green font-bold">Home</RouterLink>
+          <RouterLink to="/shop" class="text-gray-600 hover:text-freshco-green font-medium transition-colors" active-class="text-freshco-green font-bold">Shop</RouterLink>
+          <RouterLink to="/recipes" class="text-gray-600 hover:text-freshco-green font-medium transition-colors" active-class="text-freshco-green font-bold">Recipes</RouterLink>
+          <RouterLink to="/blog" class="text-gray-600 hover:text-freshco-green font-medium transition-colors" active-class="text-freshco-green font-bold">Blog</RouterLink>
+          <RouterLink to="/contact" class="text-gray-600 hover:text-freshco-green font-medium transition-colors" active-class="text-freshco-green font-bold">Contact</RouterLink>
         </div>
 
         <!-- Search Bar (Desktop) -->
         <div class="hidden md:flex flex-1 max-w-md mx-8">
-          <div class="relative w-full">
+          <form @submit.prevent="handleSearch" class="relative w-full">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search class="h-5 w-5 text-gray-400" />
             </div>
             <input 
+              v-model="searchQuery"
               type="text" 
               class="block w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full leading-5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-freshco-green/20 focus:border-freshco-green sm:text-sm transition-all" 
-              placeholder="Search products..." 
+              placeholder="Cari produk atau resep..." 
             />
-          </div>
+          </form>
         </div>
 
         <!-- Right Side Icons & Location -->
@@ -53,9 +61,9 @@ const selectedLocation = ref('Pilih Lokasi Pengiriman')
             <span class="max-w-[100px] truncate">{{ selectedLocation }}</span>
           </button>
         
-          <button class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
+          <RouterLink to="/wishlist" class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
             <Heart class="h-6 w-6 stroke-[1.5]" />
-          </button>
+          </RouterLink>
           
           <button @click="toggleCart" class="relative text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
             <ShoppingCart class="h-6 w-6 stroke-[1.5]" />
@@ -64,9 +72,13 @@ const selectedLocation = ref('Pilih Lokasi Pengiriman')
             </span>
           </button>
 
-          <button class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
+          <RouterLink to="/orders" v-if="isAuthenticated" class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50" title="Orders">
+            <ClipboardList class="h-6 w-6 stroke-[1.5]" />
+          </RouterLink>
+
+          <RouterLink :to="isAuthenticated ? '/profile' : '/login'" class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
             <UserCircle class="h-6 w-6 stroke-[1.5]" />
-          </button>
+          </RouterLink>
           
           <button class="lg:hidden text-gray-600 hover:text-freshco-green transition-colors p-2">
             <Menu class="h-6 w-6 stroke-[1.5]" />
@@ -78,7 +90,7 @@ const selectedLocation = ref('Pilih Lokasi Pengiriman')
   
   <!-- Simple Location Modal -->
   <div v-if="showLocationModal" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
        <h3 class="text-xl font-bold mb-4">Pilih Lokasi Pengiriman</h3>
        <input type="text" placeholder="Masukkan alamat atau kode pos" class="w-full border border-gray-200 rounded-lg p-3 mb-4 focus:outline-none focus:border-freshco-green" />
        <div class="flex justify-end gap-2">
