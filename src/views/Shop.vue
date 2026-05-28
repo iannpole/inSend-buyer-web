@@ -13,7 +13,7 @@ const router = useRouter()
 
 const products = ref<any[]>([])
 const loading = ref(true)
-const categories = ['All', 'Sayuran', 'Buah', 'Daging', 'Seafood', 'Bumbu']
+const categories = ['All', 'Sayuran', 'Buah', 'Daging', 'Seafood', 'Bumbu', 'Susu & Telur', 'Camilan']
 const selectedCategory = ref(route.query.category as string || 'All')
 
 // Pagination state
@@ -81,7 +81,7 @@ const handleAddToCart = (product: any) => {
   <div class="min-h-screen bg-gray-50 font-sans text-gray-800">
     <Navbar />
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 pb-20">
+    <div class="w-full mx-auto px-4 sm:px-8 lg:px-16 mt-6 pb-20">
       
       <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-black text-gray-900">

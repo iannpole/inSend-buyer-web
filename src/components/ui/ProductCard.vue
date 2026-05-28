@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Heart } from 'lucide-vue-next'
+import { useWishlist } from '../../store/wishlist'
 
-defineProps<{
+const props = defineProps<{
   id?: string
   title: string
   price: number
@@ -14,7 +16,14 @@ defineProps<{
   discount?: string
 }>()
 
-import { useWishlist } from '../../store/wishlist'
+const discountPercentage = computed(() => {
+  if (props.originalPrice && props.originalPrice > props.price) {
+    const discount = ((props.originalPrice - props.price) / props.originalPrice) * 100
+    return Math.round(discount)
+  }
+  return null
+})
+
 const { isInWishlist, toggleWishlist } = useWishlist()
 
 const handleWishlistClick = async (e: Event, productId?: string) => {
@@ -43,10 +52,13 @@ const handleImageError = (e: Event) => {
 </script>
 
 <template>
-  <div class="group relative bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+  <div class="group relative bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 flex flex-col h-full">
     
     <!-- Discount Badge -->
-    <span v-if="discount" class="absolute top-4 left-4 z-10 px-2 py-0.5 text-[10px] font-bold bg-white text-gray-800 rounded shadow-sm">
+    <span v-if="discountPercentage" class="absolute top-4 left-4 z-10 px-2.5 py-1 text-xs font-black bg-[#FF8904] text-white rounded-lg shadow-md">
+      {{ discountPercentage }}% OFF
+    </span>
+    <span v-else-if="discount" class="absolute top-4 left-4 z-10 px-2.5 py-1 text-xs font-black bg-[#FF8904] text-white rounded-lg shadow-md">
       {{ discount }}
     </span>
 
@@ -60,17 +72,17 @@ const handleImageError = (e: Event) => {
     </button>
 
     <!-- Image -->
-    <div class="relative w-full aspect-[4/3] bg-white rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
+    <div class="relative w-full aspect-[4/3] bg-gray-50 overflow-hidden">
       <img 
         :src="imageUrl" 
         :alt="title"
         @error="handleImageError"
-        class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500"
+        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
       />
     </div>
 
     <!-- Content -->
-    <div class="flex-grow flex flex-col">
+    <div class="p-4 flex-grow flex flex-col">
       <span class="text-xs text-gray-500 font-medium mb-1">{{ category }}</span>
       <h3 class="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight mb-1 flex-grow">
         {{ title }}

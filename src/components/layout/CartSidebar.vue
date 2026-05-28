@@ -164,7 +164,7 @@ const placeOrder = async () => {
           // Laravel validation errors object
           const keys = Object.keys(msg)
           if (keys.length > 0) {
-              const firstKey = keys[0]
+              const firstKey = keys[0] as string
               orderError.value = (msg as any)[firstKey]?.[0] || 'Validasi gagal. Periksa kembali data Anda.'
           } else {
               orderError.value = 'Validasi gagal. Periksa kembali data Anda.'
