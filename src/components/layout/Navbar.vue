@@ -2,8 +2,11 @@
 import { ShoppingCart, Search, Menu, UserCircle, Heart, MapPin, ClipboardList } from 'lucide-vue-next'
 import { useCart } from '../../store/cart'
 import { useAuth } from '../../store/auth'
+import { useWishlist } from '../../store/wishlist'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+const { wishlistCount } = useWishlist()
 
 const { cartCount, toggleCart } = useCart()
 const { isAuthenticated, user, clearAuth } = useAuth()
@@ -61,8 +64,11 @@ const handleSearch = () => {
             <span class="max-w-[100px] truncate">{{ selectedLocation }}</span>
           </button>
         
-          <RouterLink to="/wishlist" class="text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
+          <RouterLink to="/wishlist" class="relative text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">
             <Heart class="h-6 w-6 stroke-[1.5]" />
+            <span v-if="wishlistCount > 0" class="absolute top-1 right-1 flex items-center justify-center h-4 w-4 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {{ wishlistCount }}
+            </span>
           </RouterLink>
           
           <button @click="toggleCart" class="relative text-gray-600 hover:text-freshco-green transition-colors p-2 rounded-full hover:bg-gray-50">

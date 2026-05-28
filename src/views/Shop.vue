@@ -116,6 +116,7 @@ const handleAddToCart = (product: any) => {
           <ProductCard 
             v-for="product in products" 
             :key="product._id || product.id"
+            :id="product._id || product.id"
             :title="product.name || product.title"
             :price="product.sale_price || product.base_price || product.price"
             :original-price="product.sale_price ? product.base_price : product.original_price"

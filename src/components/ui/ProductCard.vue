@@ -2,6 +2,7 @@
 import { Heart } from 'lucide-vue-next'
 
 defineProps<{
+  id?: string
   title: string
   price: number
   imageUrl: string
@@ -13,6 +14,16 @@ defineProps<{
   discount?: string
 }>()
 
+import { useWishlist } from '../../store/wishlist'
+const { isInWishlist, toggleWishlist } = useWishlist()
+
+const handleWishlistClick = async (e: Event, productId?: string) => {
+  e.stopPropagation() // Prevent card click
+  if (productId) {
+    await toggleWishlist(productId)
+  }
+}
+
 const emit = defineEmits(['add-to-cart'])
 
 const formatPrice = (value: number) => {
@@ -21,6 +32,13 @@ const formatPrice = (value: number) => {
     currency: 'IDR',
     minimumFractionDigits: 0,
   }).format(value)
+}
+
+const handleImageError = (e: Event) => {
+  const target = e.target as HTMLImageElement;
+  if (target) {
+    target.src = 'https://via.placeholder.com/200?text=No+Image';
+  }
 }
 </script>
 
@@ -33,8 +51,12 @@ const formatPrice = (value: number) => {
     </span>
 
     <!-- Wishlist Button -->
-    <button class="absolute top-4 right-4 z-10 text-gray-300 hover:text-red-500 transition-colors">
-      <Heart class="h-5 w-5" />
+    <button 
+      @click="(e) => handleWishlistClick(e, id)"
+      class="absolute top-4 right-4 z-10 transition-colors"
+      :class="id && isInWishlist(id) ? 'text-red-500 hover:text-red-600' : 'text-gray-300 hover:text-red-500'"
+    >
+      <Heart class="h-5 w-5" :class="id && isInWishlist(id) ? 'fill-current' : ''" />
     </button>
 
     <!-- Image -->
@@ -42,6 +64,7 @@ const formatPrice = (value: number) => {
       <img 
         :src="imageUrl" 
         :alt="title"
+        @error="handleImageError"
         class="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500"
       />
     </div>

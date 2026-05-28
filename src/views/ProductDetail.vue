@@ -2,12 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { ChevronLeft, ShoppingCart, Star, Minus, Plus, Tag } from 'lucide-vue-next'
+import { ChevronLeft, ShoppingCart, Star, Minus, Plus, Tag, Heart } from 'lucide-vue-next'
 import { useCart } from '../store/cart'
+import { useWishlist } from '../store/wishlist'
 
 const route = useRoute()
 const router = useRouter()
 const { addToCart } = useCart()
+const { isInWishlist, toggleWishlist } = useWishlist()
 
 const product = ref<any>(null)
 const loading = ref(true)
@@ -91,6 +93,14 @@ const formatPrice = (value: number) => {
             <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
                 <button @click="router.back()" class="w-12 h-12 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center text-gray-900 shadow-sm hover:bg-white transition-colors border border-gray-100">
                     <ChevronLeft class="w-6 h-6" />
+                </button>
+                <button 
+                  v-if="product"
+                  @click="toggleWishlist(product._id || product.id)" 
+                  class="w-12 h-12 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-sm hover:bg-white transition-colors border border-gray-100"
+                  :class="isInWishlist(product._id || product.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'"
+                >
+                    <Heart class="w-6 h-6" :class="isInWishlist(product._id || product.id) ? 'fill-current' : ''" />
                 </button>
             </div>
             

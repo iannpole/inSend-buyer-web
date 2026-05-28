@@ -4,6 +4,7 @@ import axios from 'axios'
 import Navbar from '../components/layout/Navbar.vue'
 import Footer from '../components/layout/Footer.vue'
 import ProductCard from '../components/ui/ProductCard.vue'
+import PartnerScroll from '../components/ui/PartnerScroll.vue'
 import { useCart } from '../store/cart'
 import { useRouter } from 'vue-router'
 
@@ -83,6 +84,16 @@ const handleAddToCart = (product: any) => {
   }
   addToCart(cartItem)
 }
+
+const handleRecipeImageError = (e: Event) => {
+  const target = e.target as HTMLImageElement;
+  if (target) target.src = 'https://via.placeholder.com/300?text=No+Image';
+}
+
+const handleBlogImageError = (e: Event) => {
+  const target = e.target as HTMLImageElement;
+  if (target) target.src = 'https://via.placeholder.com/300?text=Blog';
+}
 </script>
 
 <template>
@@ -127,7 +138,7 @@ const handleAddToCart = (product: any) => {
 
       <!-- Promotional Banners -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div class="bg-freshco-green rounded-2xl p-6 relative overflow-hidden flex items-center min-h-[160px]">
+        <div class="bg-[#10664F] rounded-2xl p-6 relative overflow-hidden flex items-center min-h-[160px]">
           <div class="relative z-10 w-2/3">
             <h3 class="text-white font-bold text-lg mb-2">Gratis Ongkir<br/>Belanja di atas 100k</h3>
             <button @click="router.push('/shop')" class="bg-white text-gray-800 text-xs font-bold py-1.5 px-4 rounded-full mt-2">Shop Now</button>
@@ -142,7 +153,7 @@ const handleAddToCart = (product: any) => {
           </div>
           <img src="https://images.unsplash.com/photo-1561136594-7f68413baa99?w=200&fit=crop" class="absolute -right-8 bottom-0 w-40 h-auto object-contain drop-shadow-xl" />
         </div>
-        <div class="bg-freshco-accent rounded-2xl p-6 relative overflow-hidden flex items-center min-h-[160px]">
+        <div class="bg-[#FFC107] rounded-2xl p-6 relative overflow-hidden flex items-center min-h-[160px]">
           <div class="relative z-10 w-2/3">
             <h3 class="text-gray-900 font-black text-xl mb-1">40% OFF</h3>
             <p class="text-gray-800 text-xs mb-3 font-medium">Puasin belanja buat makan enak hari ini</p>
@@ -169,6 +180,7 @@ const handleAddToCart = (product: any) => {
           <ProductCard 
             v-for="product in products.slice(0, 6)" 
             :key="product._id || product.id"
+            :id="product._id || product.id"
             :title="product.name || product.title"
             :price="product.sale_price || product.base_price || product.price"
             :original-price="product.sale_price ? product.base_price : product.original_price"
@@ -194,6 +206,7 @@ const handleAddToCart = (product: any) => {
            <ProductCard 
             v-for="product in (discountedProducts.length > 0 ? discountedProducts : products).slice(0, 6)" 
             :key="'deal-'+(product._id || product.id)"
+            :id="product._id || product.id"
             :title="product.name || product.title"
             :price="product.sale_price || product.base_price || product.price"
             :original-price="product.sale_price ? product.base_price : product.original_price"
@@ -208,6 +221,9 @@ const handleAddToCart = (product: any) => {
         </div>
       </div>
 
+      <!-- Partner Scroll Velocity Effect -->
+      <PartnerScroll />
+
       <!-- Recipes Scrollable Section with Tilt effect -->
       <div class="mb-16">
           <div class="flex items-center justify-between mb-6">
@@ -218,8 +234,8 @@ const handleAddToCart = (product: any) => {
               <div v-for="(recipe, index) in recipes" :key="recipe.id || index" 
                    @click="router.push(`/recipes/${recipe.id || 1}`)"
                    class="recipe-card flex-shrink-0 w-[280px] bg-white rounded-3xl p-4 shadow-sm border border-gray-100 cursor-pointer transition-all duration-300">
-                  <div class="h-40 rounded-2xl overflow-hidden mb-4 relative">
-                      <img :src="recipe.image || 'https://via.placeholder.com/300'" class="w-full h-full object-cover" />
+                  <div class="h-40 rounded-2xl overflow-hidden mb-4 relative bg-gray-100">
+                      <img :src="recipe.image || 'https://via.placeholder.com/300?text=No+Image'" @error="handleRecipeImageError" class="w-full h-full object-cover" />
                   </div>
                   <h3 class="font-bold text-gray-900 text-lg line-clamp-1 mb-2">{{ recipe.title }}</h3>
                   <div class="flex items-center gap-2 mb-3">
@@ -242,7 +258,7 @@ const handleAddToCart = (product: any) => {
                    @click="router.push('/blog')"
                    class="flex-shrink-0 w-[300px] group cursor-pointer">
                   <div class="h-48 bg-gray-200 rounded-2xl overflow-hidden mb-4 relative">
-                      <img :src="post.image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img :src="post.image" @error="handleBlogImageError" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       <span class="absolute top-3 left-3 bg-white/90 backdrop-blur text-gray-900 px-3 py-1 rounded-full text-[10px] font-bold">{{ post.category }}</span>
                   </div>
                   <h3 class="font-bold text-gray-900 line-clamp-2 group-hover:text-freshco-green transition-colors leading-tight">{{ post.title }}</h3>

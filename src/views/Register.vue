@@ -91,11 +91,18 @@ const resendOtp = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
-    <Navbar />
+  <div class="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col relative">
     
-    <div class="flex-1 flex items-center justify-center p-4 py-12">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm border border-gray-100">
+    <div class="absolute inset-0 z-0">
+      <img src="../assets/bckrnd_inSend.jpg" class="w-full h-full object-cover" />
+      <div class="absolute inset-0 bg-[#00473B] opacity-50"></div>
+    </div>
+
+    <div class="relative z-10 flex flex-col flex-1">
+      <Navbar />
+      
+      <div class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
             <div class="text-center mb-8">
                 <div class="inline-block bg-freshco-green text-white p-2.5 rounded-xl mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-plus"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
@@ -168,6 +175,7 @@ const resendOtp = async () => {
                 <RouterLink to="/login" class="text-freshco-green font-bold hover:underline">Login here</RouterLink>
             </div>
         </div>
+      </div>
     </div>
   </div>
 </template>

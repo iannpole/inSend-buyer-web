@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-freshco-green: #10664F;
-  --color-freshco-light: #F4F7F6;
-  --color-freshco-accent: #FFC107;
+  --color-freshco-green: #00473B;
+  --color-freshco-light: #FCFFC6;
+  --color-freshco-accent: #FF8904;
+  --color-freshco-green-light: #00A63E;
   --color-freshco-text: #1F2937;
   --color-freshco-gray: #6B7280;
 

@@ -40,11 +40,19 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
-    <Navbar />
+  <div class="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col relative">
     
-    <div class="flex-1 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-sm border border-gray-100">
+    <!-- Background Image with #00473B 50% overlay -->
+    <div class="absolute inset-0 z-0">
+      <img src="../assets/bckrnd_inSend.jpg" class="w-full h-full object-cover" />
+      <div class="absolute inset-0 bg-[#00473B] opacity-50"></div>
+    </div>
+    
+    <div class="relative z-10 flex flex-col flex-1">
+      <Navbar />
+      
+      <div class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/20">
             <div class="text-center mb-8">
                 <div class="inline-block bg-freshco-green text-white p-2.5 rounded-xl mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-leaf"><path d="M11 20A7 7 0 0 1 14 6c5 0 8 4 8 4-4 8-11 11-11 11z"/><path d="M2 15s4-7 12-7"/></svg>
@@ -72,7 +80,7 @@ const handleLogin = async () => {
                         <input type="checkbox" class="rounded text-freshco-green focus:ring-freshco-green" />
                         <span class="text-sm text-gray-600">Remember me</span>
                     </label>
-                    <a href="#" class="text-sm text-freshco-green font-semibold hover:underline">Forgot Password?</a>
+                    <RouterLink to="/forgot-password" class="text-sm text-freshco-green font-semibold hover:underline">Forgot Password?</RouterLink>
                 </div>
 
                 <button type="submit" :disabled="loading" class="w-full bg-freshco-green text-white py-3.5 rounded-xl font-bold hover:bg-[#0c513e] transition-colors mt-6 disabled:opacity-70">
@@ -86,6 +94,7 @@ const handleLogin = async () => {
                 <RouterLink to="/register" class="text-freshco-green font-bold hover:underline">Register here</RouterLink>
             </div>
         </div>
+      </div>
     </div>
   </div>
 </template>

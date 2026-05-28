@@ -11,6 +11,8 @@ import Orders from '../views/Orders.vue'
 import Wishlist from '../views/Wishlist.vue'
 import ProductDetail from '../views/ProductDetail.vue'
 import RecipeDetail from '../views/RecipeDetail.vue'
+import ForgotPassword from '../views/ForgotPassword.vue'
+import ResetPassword from '../views/ResetPassword.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,7 +28,9 @@ const router = createRouter({
     { path: '/register', name: 'register', component: Register },
     { path: '/profile', name: 'profile', component: Profile },
     { path: '/orders', name: 'orders', component: Orders },
-    { path: '/wishlist', name: 'wishlist', component: Wishlist }
+    { path: '/wishlist', name: 'wishlist', component: Wishlist },
+    { path: '/forgot-password', name: 'forgot-password', component: ForgotPassword },
+    { path: '/reset-password', name: 'reset-password', component: ResetPassword }
   ],
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
