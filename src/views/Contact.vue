@@ -1,4 +1,4 @@
-<script setup lang="ts">
+ddddd<script setup lang="ts">
 import Navbar from '../components/layout/Navbar.vue'
 import { MapPin, Phone, Mail, Clock } from 'lucide-vue-next'
 </script>
