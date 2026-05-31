@@ -32,7 +32,7 @@ const router = createRouter({
     { path: '/forgot-password', name: 'forgot-password', component: ForgotPassword },
     { path: '/reset-password', name: 'reset-password', component: ResetPassword }
   ],
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition
     } else {

@@ -68,8 +68,20 @@ const statusColor = (status: string) => {
     return colors[status] || 'bg-gray-100 text-gray-800'
 }
 
-const cancelOrder = async (orderId: string) => {
-    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) return
+const orderToCancel = ref<string | null>(null)
+
+const confirmCancel = (orderId: string) => {
+    orderToCancel.value = orderId
+}
+
+const closeCancel = () => {
+    orderToCancel.value = null
+}
+
+const executeCancel = async () => {
+    if (!orderToCancel.value) return
+    const orderId = orderToCancel.value
+    orderToCancel.value = null // close modal
     
     cancelLoading.value = orderId
     try {
@@ -77,7 +89,6 @@ const cancelOrder = async (orderId: string) => {
         await axios.delete(`${baseURL}/orders/${orderId}`, {
             headers: { Authorization: `Bearer ${token.value}` }
         })
-        alert('Pesanan berhasil dibatalkan.')
         fetchOrders() // refresh data
     } catch (error: any) {
         alert(error.response?.data?.message || 'Gagal membatalkan pesanan.')
@@ -166,7 +177,7 @@ onMounted(() => {
                 <!-- Action Buttons -->
                 <div v-if="order.status === 'pending' || order.status === 'awaiting_payment'" class="flex gap-2 w-full md:w-auto">
                     <button 
-                        @click="cancelOrder(order._id || order.id)" 
+                        @click="confirmCancel(order._id || order.id)" 
                         :disabled="cancelLoading === (order._id || order.id)"
                         class="flex-1 md:flex-none border border-red-200 text-red-500 hover:bg-red-50 py-2 px-4 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                     >
@@ -196,8 +207,8 @@ onMounted(() => {
               <div v-if="selectedOrder.payment_method === 'qris'" class="text-center">
                    <p class="text-sm text-gray-500 mb-4">Total: <span class="font-bold text-freshco-green text-lg">{{ formatPrice(selectedOrder.total_price) }}</span></p>
                    
-                   <div class="bg-gray-50 p-4 rounded-xl shadow-inner inline-block mb-3 border border-gray-100">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QRIS" class="w-48 h-48 object-contain mx-auto opacity-80" />
+                   <div class="bg-white p-2 rounded-xl shadow-sm inline-block mb-3 border border-gray-200 overflow-hidden w-full max-w-[200px]">
+                      <img src="../assets/qris.jpeg" alt="QRIS" class="w-full h-auto object-cover mx-auto" />
                    </div>
                    <p class="text-xs text-gray-500 mt-3 font-medium">Buka aplikasi e-wallet Anda (GoPay, OVO, dll) dan scan QR Code di atas.</p>
               </div>
@@ -222,6 +233,20 @@ onMounted(() => {
               <button @click="showPaymentModal = false" class="w-full bg-freshco-green text-white py-3.5 px-6 rounded-xl font-bold hover:bg-[#0c513e] transition-colors mt-6 shadow-md">
                    Tutup
               </button>
+          </div>
+      </div>
+      <!-- Cancel Order Modal -->
+      <div v-if="orderToCancel" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center">
+              <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </div>
+              <h3 class="text-xl font-black text-gray-900 mb-2">Batalkan Pesanan?</h3>
+              <p class="text-gray-500 text-sm mb-6">Apakah Anda yakin ingin membatalkan pesanan ini? Tindakan ini tidak dapat diurungkan.</p>
+              <div class="flex gap-3">
+                  <button @click="closeCancel" class="flex-1 py-3 px-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">Kembali</button>
+                  <button @click="executeCancel" class="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-md shadow-red-500/20">Batalkan</button>
+              </div>
           </div>
       </div>
     </div>

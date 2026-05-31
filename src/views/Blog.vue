@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import Navbar from '../components/layout/Navbar.vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
+
 const posts = ref<any[]>([])
 const sidebarData = ref<any>({ categories: [], recent_posts: [], tags: [] })
 const selectedPost = ref<any>(null)
@@ -91,7 +90,7 @@ const formatContent = (content: string) => {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
       
       <div class="text-center mb-10 py-8 bg-white rounded-3xl border border-gray-100 shadow-sm" v-if="!selectedPost">
-        <h1 class="text-4xl font-black text-gray-900 mb-3">inSend Blog 📝</h1>
+        <h1 class="text-4xl font-black text-gray-900 mb-3">inSend Blog </h1>
         <p class="text-gray-500 max-w-2xl mx-auto">Portal berita seputar sayuran, bahan masakan sehat, tips & trik dapur, serta resep-resep pilihan.</p>
       </div>
 

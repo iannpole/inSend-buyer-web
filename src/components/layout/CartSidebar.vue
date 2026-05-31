@@ -36,25 +36,33 @@ const appliedPromoCode = ref('')
 const discountAmount = ref(0)
 const promoError = ref('')
 const promoSuccess = ref('')
+const promoLoading = ref(false)
 
-const applyPromo = () => {
+const applyPromo = async () => {
     promoError.value = ''
     promoSuccess.value = ''
     if (!promoCodeInput.value) return
 
-    const code = promoCodeInput.value.toUpperCase()
-    if (code === 'INSEND20') {
-        appliedPromoCode.value = code
-        discountAmount.value = 20000
-        promoSuccess.value = 'Voucher potongan Rp 20.000 berhasil digunakan!'
-    } else if (code === 'SAYURSEGAR') {
-        appliedPromoCode.value = code
-        discountAmount.value = cartTotal.value * 0.1 // 10% discount
-        promoSuccess.value = 'Voucher diskon 10% berhasil digunakan!'
-    } else {
-        promoError.value = 'Kode voucher tidak valid atau sudah kadaluarsa.'
+    promoLoading.value = true
+    try {
+        const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+        const response = await axios.post(`${baseURL}/promos/validate`, {
+            code: promoCodeInput.value,
+            order_amount: cartTotal.value,
+            delivery_fee: deliveryFee.value
+        }, {
+            headers: { Authorization: `Bearer ${token.value}` }
+        })
+        
+        appliedPromoCode.value = response.data.data.code
+        discountAmount.value = response.data.data.discount_amount
+        promoSuccess.value = response.data.message
+    } catch (error: any) {
+        promoError.value = error.response?.data?.message || 'Kode promo tidak valid atau sudah kadaluarsa.'
         appliedPromoCode.value = ''
         discountAmount.value = 0
+    } finally {
+        promoLoading.value = false
     }
 }
 
@@ -64,6 +72,21 @@ const removePromo = () => {
     discountAmount.value = 0
     promoSuccess.value = ''
     promoError.value = ''
+}
+
+// Confirm Delete State
+const itemToDelete = ref<number | null>(null)
+const confirmDelete = (id: number) => {
+    itemToDelete.value = id
+}
+const executeDelete = () => {
+    if (itemToDelete.value) {
+        removeFromCart(itemToDelete.value)
+        itemToDelete.value = null
+    }
+}
+const cancelDelete = () => {
+    itemToDelete.value = null
 }
 
 // Delivery fee based on option and cart total
@@ -234,7 +257,7 @@ const resetCart = () => {
               <div class="flex-1 flex flex-col justify-between py-1">
                 <div class="flex justify-between items-start">
                   <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 leading-tight pr-2">{{ item.title }}</h3>
-                  <button @click="removeFromCart(item.id)" class="text-gray-300 hover:text-red-500 transition-colors">
+                  <button @click="confirmDelete(item.id)" class="text-gray-300 hover:text-red-500 transition-colors">
                     <Trash2 class="h-4 w-4" />
                   </button>
                 </div>
@@ -362,7 +385,9 @@ const resetCart = () => {
               <h3 class="font-bold text-gray-900 flex items-center gap-2">🎫 Promo Code</h3>
               <div v-if="!appliedPromoCode" class="flex gap-2">
                  <input type="text" v-model="promoCodeInput" placeholder="Contoh: INSEND20" class="flex-1 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-freshco-green focus:ring-1 focus:ring-freshco-green uppercase" />
-                 <button @click="applyPromo" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors">Apply</button>
+                 <button @click="applyPromo" :disabled="promoLoading" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors disabled:opacity-50">
+                    {{ promoLoading ? '...' : 'Apply' }}
+                 </button>
               </div>
               <div v-else class="flex items-center justify-between bg-green-50 border border-freshco-green p-3 rounded-xl">
                  <div>
@@ -458,10 +483,8 @@ const resetCart = () => {
                    <h3 class="font-bold text-gray-900 mb-2">Silakan Lakukan Pembayaran QRIS</h3>
                    <p class="text-sm text-gray-500 mb-4">Total: <span class="font-bold text-freshco-green text-lg">{{ formatPrice(finalTotal) }}</span></p>
                    
-                   <div class="bg-white p-4 rounded-xl shadow-sm inline-block mb-3 border border-gray-200">
-                      <!-- Tempat upload/masukkan gambar QRIS milik user -->
-                      <!-- Gambar default ini silakan diganti dengan aset QRIS toko Anda nantinya (contoh: src="../assets/qris-toko.png") -->
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QRIS" class="w-48 h-48 object-contain mx-auto opacity-80" />
+                   <div class="bg-white p-2 rounded-xl shadow-sm inline-block mb-3 border border-gray-200 overflow-hidden w-full max-w-[200px]">
+                      <img src="../../assets/qris.jpeg" alt="QRIS" class="w-full h-auto object-cover mx-auto" />
                    </div>
                    <p class="text-xs text-gray-500 mt-3 font-medium">Buka aplikasi e-wallet Anda (GoPay, OVO, dll) dan scan QR Code di atas.</p>
                 </div>
@@ -497,6 +520,20 @@ const resetCart = () => {
             </div>
          </div>
       </template>
+      <!-- Confirm Delete Modal -->
+      <div v-if="itemToDelete" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl relative text-center">
+              <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 class="w-8 h-8 text-red-500" />
+              </div>
+              <h3 class="text-xl font-black text-gray-900 mb-2">Hapus Pesanan?</h3>
+              <p class="text-gray-500 text-sm mb-6">Apakah Anda yakin ingin menghapus pesanan ini dari keranjang?</p>
+              <div class="flex gap-3">
+                  <button @click="cancelDelete" class="flex-1 py-3 px-4 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">Batal</button>
+                  <button @click="executeDelete" class="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-md shadow-red-500/20">Hapus</button>
+              </div>
+          </div>
+      </div>
     </div>
   </div>
 </template>

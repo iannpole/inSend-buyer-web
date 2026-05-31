@@ -9,7 +9,7 @@ import { useRouter } from 'vue-router'
 const { wishlistCount } = useWishlist()
 
 const { cartCount, toggleCart } = useCart()
-const { isAuthenticated, user, clearAuth } = useAuth()
+const { isAuthenticated } = useAuth()
 const router = useRouter()
 
 const showLocationModal = ref(false)

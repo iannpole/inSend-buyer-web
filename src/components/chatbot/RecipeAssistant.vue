@@ -110,13 +110,36 @@ const sendMessage = async () => {
 const addRecipeIngredients = (recipe: any) => {
   // Recipe structure from RecipeBotService: { name, ingredients: [{name, amount, unit, product_id?}], ... }
   const ingredients = recipe.ingredients || []
-  ingredients.forEach((item: any, idx: number) => {
-    addToCart({
-      id: item.product_id || `ai-recipe-${Date.now()}-${idx}`,
-      title: typeof item === 'string' ? item : (item.name || 'Bahan'),
-      price: item.price || 15000, // Default price if not available
-      imageUrl: item.imageUrl || 'https://via.placeholder.com/80?text=' + encodeURIComponent(typeof item === 'string' ? item : (item.name || 'Bahan'))
-    }, item.qty || 1)
+  let addedCount = 0;
+  let unmappedCount = 0;
+
+  ingredients.forEach((item: any) => {
+    if (item.product_id) {
+      addToCart({
+        id: item.product_id,
+        title: typeof item === 'string' ? item : (item.name || 'Bahan'),
+        price: item.price || 15000, // Default price if not available
+        imageUrl: item.imageUrl || 'https://via.placeholder.com/80?text=' + encodeURIComponent(typeof item === 'string' ? item : (item.name || 'Bahan'))
+      }, item.qty || 1)
+      addedCount++;
+    } else {
+      unmappedCount++;
+    }
+  })
+
+  let botMessage = ''
+  if (unmappedCount > 0 && addedCount > 0) {
+    botMessage = `Bip bop! Menambahkan ${addedCount} bahan ke keranjang. ${unmappedCount} bahan lainnya belum tersedia di toko kami.`
+  } else if (addedCount > 0) {
+    botMessage = `Bip bop! Semua bahan berhasil ditambahkan ke keranjang.`
+  } else {
+    botMessage = `Maaf, tidak ada bahan dari resep ini yang tersedia di toko saat ini.`
+  }
+
+  chatMessages.value.push({
+    id: Date.now() + 2,
+    sender: 'bot',
+    text: botMessage
   })
 }
 

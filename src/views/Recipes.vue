@@ -51,7 +51,7 @@ onMounted(() => {
       
       <div class="flex items-center justify-between mb-8">
         <div>
-            <h1 class="text-3xl font-black text-gray-900 mb-2">Healthy Recipes 🥗</h1>
+            <h1 class="text-3xl font-black text-gray-900 mb-2">Healthy Recipes </h1>
             <p class="text-gray-500">Temukan inspirasi masakan sehat dan mudah dari inSend.</p>
         </div>
       </div>
